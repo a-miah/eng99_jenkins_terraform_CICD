@@ -46,3 +46,10 @@ sudo ufw enable
 
 ## Install plugins
 - Node, Git, Terraform, Ansible
+
+## Terraform in Jenkins 
+
+- Terraform plugin
+- Add AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_DEFAULT_REGION=eu-west-1
+- create new jenkins job
+- Configure jobs as below
