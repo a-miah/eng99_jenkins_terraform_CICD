@@ -1,4 +1,6 @@
-# Building Jenkins Server
+# Automate IaC with Terraform and Ansible
+
+## Building Jenkins Server
 
 1. Launch EC2 instance on AWS
 2. SSH into on bash
@@ -44,12 +46,87 @@ sudo ufw enable
 7. Admin password - `sudo cat /var/lib/jenkins/secrets/initialAdminPassword`
 8. Continue with account setup and install suggested plugins 
 
-## Install plugins
-- Node, Git, Terraform, Ansible
 
 ## Terraform in Jenkins 
 
-- Terraform plugin
-- Add AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_DEFAULT_REGION=eu-west-1
-- create new jenkins job
-- Configure jobs as below
+### Install Terraform plugin
+- Dashboard > Manage jenkins > Manage plugins > Terraform 
+
+### Downloading Terraform on Jenkins Instance 
+1.  Download Terraform for Linux - https://www.terraform.io/downloads
+2.  Use following commands:
+```
+- wget https://releases.hashicorp.com/terraform/1.1.3/terraform_1.1.3_linux_amd64.zip
+- sudo apt install unzip
+- sudo unzip terraform_1.1.3_linux_amd64.zip
+- sudo mv terraform /usr/bin
+- terraform --version
+```
+3. Dashboard > Manage Jenkins > Global Tool Configuration > Terraform > Add Terraform
+4. Configure
+```
+Name: Terraform
+Install directory: /usr/bin/
+```
+
+### IaC using Terraform 
+- Look at main.tf for script on creating VPC and EC2 Instances
+
+### Configuring Environment Variables
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_DEFAULT_REGION = eu-west-1
+
+### Create new jenkins job 
+- Pick pipeline instead of freestyle
+- Configure job as below:
+
+![](Images/terraform-job-1.JPG)
+![](Images/terraform-job-2.JPG)
+
+
+### Code in Pipeline script 
+
+```
+pipeline {
+    agent any
+    stages {
+        stage ('Checkout'){
+            steps {
+                sh 'rm -rf eng99_jenkins_terraform_CICD'
+                sh "git clone https://github.com/a-miah/eng99_jenkins_terraform_CICD.git"
+            }
+        }
+        stage('Apply Terraform'){
+            steps{
+                dir("eng99_jenkins_terraform_CICD"){
+                    sh 'terraform init'
+                    sh 'terraform apply --auto-approve'
+                }
+            }
+            
+        }
+        
+    }
+}
+```
+
+## Creating Webhook
+
+### Creating public and private keys
+- In git bash --> `cd .ssh`
+- Create a public and private key --> `ssh-keygen -t rsa -b 4096 -C "<email_address>"`
+- Name the keys
+- Github repo > Settings > Deploy keys > Add key > Copy public key into github
+
+### Adding Webhook
+- Github repo > Settings > Webhooks > Add
+- Config as below and create
+```
+Payload URL: http://<jenkins_server_ip>:8080/github-webhook/
+Content type: application/json
+Events to trigger: send me everything
+Active: select
+```
+
+
