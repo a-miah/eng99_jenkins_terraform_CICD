@@ -130,3 +130,96 @@ Active: select
 ```
 
 
+## Ansible Playbooks
+
+### Installing Ansible
+1. Install Ansible plugin on Jenkins from Dashboard > Manage plugins
+2. Install Ansible on Jenkins server EC2 instance after ssh using following commands:
+```
+sudo apt-get update -y
+sudo apt-get udgrade -y
+sudo apt-get install software-properties-common 
+sudo apt-add-repository ppa:ansible/ansible
+sudo apt-get update
+sudo apt-get install ansible
+
+```
+3. In Global Tool Configuration add ansible and path using below:
+```
+Name: Ansible
+Path directory: /usr/bin/
+```
+- This will allow you to use jenkins jobs. Path can be found by running which ansible in ec2 instance
+
+### MongoDB playbook
+1. Create a .yml file to configure database: `sudo nano install_mongo.yml`
+
+```
+# Installing mongo in db VM
+---
+# host name
+- hosts: db
+ gather_facts: yes
+
+# gather facts for installation
+
+# we need admin access
+ become: true
+
+# The actual task is to install mongodb in db VM
+
+ tasks:
+ - name:
+   shell: |
+     sudo apt-get update -y
+     sudo apt-get upgrade -y
+     
+ - name: Installing mongodb in db VM
+   apt: pkg=mongodb state=present
+
+ - name: restarting db and chnaging conf file
+   shell: |
+     rm -rf /etc/mongod.conf
+     cp ./mongod.conf /etc/mongod.conf
+     sudo systemctl restart mongodb
+     sudo systemctl enable mongodb
+   become_user: root
+
+```
+
+2. Create a host file: 
+
+```
+[db]
+ec2-instance ansible_host=<EC2 Instance IP> ansible_user=ubuntu
+
+[app]
+ec2-instance ansible_host=<EC2 instance IP> ansible_user=ubuntu
+```
+
+3. Create a new jenkins job with the following pipeline script:
+
+```
+pipeline {
+    agent any
+    stages {
+        stage ('Get Filles'){
+            steps {
+                sh 'rm -rf eng99_jenkins_terraform_CICD'
+                sh "git clone https://github.com/a-miah/eng99_jenkins_terraform_CICD.git"
+            }
+        }
+        stage('Execute Ansible plaaybook'){
+            steps{
+                dir("eng99_jenkins_terraform_CICD"){
+                    ansiblePlaybook credentialsId: '', disableHostKeyChecking: true, installation: 'Ansible', inventory: 'hosts.inv', playbook: 'install_mongodb.yml'
+                }
+            }
+            
+        }
+        
+    }
+} 
+```
+
+### Playbook for App
