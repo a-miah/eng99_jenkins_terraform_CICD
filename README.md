@@ -223,3 +223,110 @@ pipeline {
 ```
 
 ### Playbook for App
+- Nginx Playbook
+
+```
+# This file is to configure and install nginx in web agent
+---
+# which host do we need to install nginx in
+- hosts: app
+  gather_facts: true
+
+# what facts do we want to see while installing
+
+# do we need admin access? yes
+  become: true
+
+# what task do we want to perform in this yml file
+  tasks:
+  - name: update and upgrade
+    shell: |
+      sudo apt-get update -y
+      sudo apt-get upgrade -y
+      
+  - name: Install Nginx in web Agent Node
+    apt: pkg=nginx state=present
+    become_user: root
+
+
+  - name: Restart nginx
+    shell: |
+      sudo systemctl restart nginx
+    become_user: root
+
+
+  tasks: 
+  - name: clone app
+    git: 
+      repo: https://github.com/a-miah/eng99_jenkins_terraform_CICD.git
+      dest: /home/ubuntu/app
+      clone: yes
+      update: yes
+```
+
+- Nodejs playbook
+
+```
+---
+# which host do we need to install nginx in
+- hosts: app
+  gather_facts: true
+
+# what facts do we want to see while installing
+
+# do we need admin access? yes
+  become: true
+
+# what task do we want to perform in this yml file
+  tasks:
+
+  - name: Install Nodejs in web Agent Node
+    shell: |
+      curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - && sudo apt-get install nodejs -y
+  - name: Install npm and pm2
+    shell: |
+      sudo apt install npm -y
+      sudo npm install pm2 -g
+
+  - name: environment variable
+    shell: |
+      echo 'export DB_HOST="mongodb://192.168.33.11:27017/posts"' >> .bashrc
+    become_user: root
+
+
+  - name: Seed and run 
+    shell: |
+      cd /home/ubuntu/app/app
+      npm install
+      node  /home/ubuntu/app/app/seeds/seed.js
+      #pm2 kill
+      #pm2 start /home/ubuntu/app/app/app.js
+
+```
+
+## Jenkins job for running playbooks
+
+```
+pipeline {
+   agent any
+   stages {
+       stage ('Get Filles'){
+           steps {
+               sh 'rm -rf eng99_jenkins_terraform_CICD'
+               sh "git clone https://github.com/a-miah/eng99_jenkins_terraform_CICD.git"
+           }
+       }
+       stage('Execute Ansible plaaybook'){
+           steps{
+               dir("eng99_jenkins_terraform_CICD"){
+                   ansiblePlaybook credentialsId: 'ff2dd3cc-5820-4ab0-b1c4-64b39cc42ee7', disableHostKeyChecking: true, installation: 'Ansible', inventory: 'hosts.inv', playbook: 'install_nginx.yml'
+                   ansiblePlaybook credentialsId: 'ff2dd3cc-5820-4ab0-b1c4-64b39cc42ee7', disableHostKeyChecking: true, installation: 'Ansible', inventory: 'hosts.inv', playbook: 'install_node.yml'
+               }
+           }
+           
+       }
+       
+   }
+} 
+```
+

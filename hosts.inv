@@ -1,0 +1,5 @@
+[db]
+54.194.248.141 ansible_user=ubuntu
+
+[app]
+34.244.111.236 ansible_user=ubuntu

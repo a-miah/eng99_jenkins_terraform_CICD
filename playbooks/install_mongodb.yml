@@ -1,0 +1,37 @@
+# Installing mongo in db VM
+---
+# host name
+- hosts: db
+  gather_facts: yes
+
+# gather facts for installation
+
+# we need admin access
+  become: true
+
+# The actual task is to install mongodb in db VM
+
+  tasks:
+  - name: Initial update and upgrade
+    shell: |
+      sudo apt-get update -y
+      sudo apt-get upgrade -y
+      
+  - name: Installing mongodb in db 
+    apt: pkg=mongodb state=present
+
+  - name: Cloning GIT
+    git:
+      repo: https://github.com/jo763/Shahrukh_eng99_CICD
+      dest: /home/vagrant/repo
+      clone: yes
+      update: yes
+  - name: Deleting and replacing mongod.conf file
+    shell: |
+      cd /etc
+      rm mongodb.conf
+      cp /home/vagrant/repo/environment/db/mongod.conf /etc/mongodb.conf
+      systemctl restart mongodb
+      systemctl enable mongodb
+
+    become_user: root
